@@ -15,14 +15,21 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { telegram_id } = req.body;
+  const { telegram_id, ads_session } = req.body;
 
   if (!telegram_id) {
     return res.status(400).json({ error: 'No user' });
   }
 
+  // 🔥 VALIDASI SESSION ADS (ANTI BYPASS BASIC)
+  if (!ads_session || ads_session !== "done") {
+    return res.status(403).json({
+      error: "Invalid ads session"
+    });
+  }
+
   // ambil user
-  let { data: user, error } = await supabase
+  let { data: user } = await supabase
     .from('users')
     .select('*')
     .eq('telegram_id', telegram_id)
@@ -36,7 +43,8 @@ export default async function handler(req, res) {
         telegram_id,
         balance: 0,
         daily_count: 0,
-        last_claim: null
+        last_claim: null,
+        last_reset: new Date().toDateString()
       })
       .select()
       .single();
@@ -58,11 +66,16 @@ export default async function handler(req, res) {
     }
   }
 
-  // reset harian (berdasarkan tanggal)
+  // reset harian
   const today = new Date().toDateString();
 
   if (user.last_reset !== today) {
     user.daily_count = 0;
+
+    await supabase
+      .from('users')
+      .update({ last_reset: today, daily_count: 0 })
+      .eq('telegram_id', telegram_id);
   }
 
   // limit harian
@@ -72,7 +85,6 @@ export default async function handler(req, res) {
     });
   }
 
-  // update data
   const newBalance = (user.balance || 0) + REWARD;
   const newCount = (user.daily_count || 0) + 1;
 
