@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-  <!-- Monetag verification -->
   <meta name="monetag" content="a20fefbe4065e0f3bda1131ba006a227">
 
   <title>Telegram Reward App</title>
@@ -38,15 +37,11 @@
       border-radius:20px;
       padding:25px;
       text-align:center;
-      box-shadow:0 10px 30px rgba(0,0,0,0.4);
     }
 
     h1{ font-size:22px; margin-bottom:10px; }
 
-    .user{
-      opacity:0.8;
-      margin-bottom:15px;
-    }
+    .user{ opacity:0.8; margin-bottom:15px; }
 
     .balance-box{
       background:rgba(34,197,94,0.15);
@@ -72,22 +67,13 @@
       color:white;
       background:linear-gradient(135deg,#22c55e,#16a34a);
       cursor:pointer;
-      transition:0.2s;
     }
 
     button:active{ transform:scale(0.97); }
 
-    .info{
-      margin-top:10px;
-      font-size:13px;
-      opacity:0.8;
-    }
+    .info{ margin-top:10px; font-size:13px; opacity:0.8; }
 
-    .small{
-      font-size:12px;
-      opacity:0.6;
-      margin-top:10px;
-    }
+    .small{ font-size:12px; opacity:0.6; margin-top:10px; }
   </style>
 </head>
 
@@ -106,7 +92,7 @@
     </div>
   </div>
 
-  <button onclick="watchAd()">
+  <button id="watchBtn" onclick="watchAd()">
     🎬 Tonton Iklan (+200)
   </button>
 
@@ -120,14 +106,16 @@
 
 </div>
 
-<!-- MONETAG SCRIPT (SAFE LOAD) -->
+<!-- MONETAG SAFE LOAD -->
 <script>
 window.addEventListener("load", () => {
-  const s = document.createElement("script");
-  s.src = "https://al5sm.com/tag.min.js";
-  s.dataset.zone = "11068057";
-  s.async = true;
-  document.body.appendChild(s);
+  setTimeout(() => {
+    const s = document.createElement("script");
+    s.src = "https://al5sm.com/tag.min.js";
+    s.dataset.zone = "11068057";
+    s.async = true;
+    document.body.appendChild(s);
+  }, 1500);
 });
 </script>
 
@@ -136,7 +124,7 @@ window.addEventListener("load", () => {
 const tg = window.Telegram?.WebApp;
 
 if(!tg){
-  alert("Harus dibuka dari Telegram Bot");
+  alert("Buka dari Telegram bot");
 }
 
 tg?.expand();
@@ -147,6 +135,7 @@ const username = document.getElementById("username");
 const balanceText = document.getElementById("balance");
 const limitInfo = document.getElementById("limitInfo");
 const cooldownText = document.getElementById("cooldownText");
+const btn = document.getElementById("watchBtn");
 
 username.innerText = user.first_name;
 
@@ -158,9 +147,18 @@ async function watchAd(){
   if(cooldown) return;
 
   cooldown = true;
-  cooldownText.innerText = "Menampilkan iklan...";
+  btn.disabled = true;
+  cooldownText.innerText = "Mempersiapkan iklan...";
 
   try {
+
+    // delay biar script ads sempat load
+    await new Promise(r => setTimeout(r, 2500));
+
+    // OPTIONAL trigger user interaction
+    document.body.click();
+
+    cooldownText.innerText = "Menampilkan iklan...";
 
     const res = await fetch('/api/reward', {
       method:'POST',
@@ -175,6 +173,7 @@ async function watchAd(){
     if(!res.ok){
       alert(data.error || "Error");
       cooldown = false;
+      btn.disabled = false;
       return;
     }
 
@@ -194,6 +193,7 @@ async function watchAd(){
       if(timeLeft <= 0){
         clearInterval(interval);
         cooldown = false;
+        btn.disabled = false;
         cooldownText.innerText = "Siap menonton iklan";
       }
 
@@ -203,6 +203,7 @@ async function watchAd(){
     console.log(err);
     alert("Server error");
     cooldown = false;
+    btn.disabled = false;
   }
 }
 
