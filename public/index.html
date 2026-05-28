@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<meta name="monetag" content="a20fefbe4065e0f3bda1131ba006a227">
+
+  <!-- Monetag verification -->
+  <meta name="monetag" content="a20fefbe4065e0f3bda1131ba006a227">
+
   <title>Telegram Reward App</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -79,25 +82,20 @@
       transform:scale(0.97);
     }
 
-    button:disabled{
-      opacity:0.5;
-      cursor:not-allowed;
-    }
-
-    .small{
-      font-size:12px;
-      opacity:0.7;
-      margin-top:10px;
-    }
-
     .info{
       margin-top:10px;
       font-size:13px;
       opacity:0.8;
     }
 
+    .small{
+      font-size:12px;
+      opacity:0.6;
+      margin-top:10px;
+    }
   </style>
 </head>
+
 <body>
 
 <div class="card">
@@ -113,9 +111,9 @@
     </div>
   </div>
 
-<button onclick="watchAd()">
-  🎬 Tonton Iklan (+200)
-</button>
+  <button onclick="watchAd()">
+    🎬 Tonton Iklan (+200)
+  </button>
 
   <div class="info" id="limitInfo">
     Sisa iklan hari ini: -
@@ -127,130 +125,85 @@
 
 </div>
 
+<!-- MONETAG SCRIPT -->
+<script>
+(function(s){
+  s.dataset.zone='11068057',
+  s.src='https://al5sm.com/tag.min.js'
+})(document.body.appendChild(document.createElement('script')));
+</script>
+
 <script>
 
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-const user = tg.initDataUnsafe.user;
+const user = tg.initDataUnsafe?.user || { id: 0, first_name: "Guest" };
 
 const username = document.getElementById("username");
 const balanceText = document.getElementById("balance");
-const btn = document.getElementById("adBtn");
-const cooldownText = document.getElementById("cooldownText");
 const limitInfo = document.getElementById("limitInfo");
+const cooldownText = document.getElementById("cooldownText");
 
-username.innerText = user?.first_name || "Guest";
+username.innerText = user.first_name;
 
 let cooldown = false;
 let cooldownTime = 15000;
 
 async function watchAd(){
 
-  // tampilkan iklan Monetag (otomatis dari script inject)
-  let adLoaded = false;
+  if(cooldown) return;
+
+  cooldown = true;
+  cooldownText.innerText = "Menampilkan iklan...";
 
   try {
-    // trigger script Monetag (biasanya otomatis jalan)
-    adLoaded = true;
-  } catch(e){
-    alert("Iklan belum siap");
-    return;
-  }
-
-  // simulasi delay biar user benar-benar lihat iklan
-  setTimeout(async () => {
 
     const res = await fetch('/api/reward', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        telegram_id:user?.id || 0
+        telegram_id: user.id
       })
     });
 
     const data = await res.json();
 
-    balanceText.innerText = data.balance;
-
-    limitInfo.innerText =
-      "Sisa iklan hari ini: " + data.remaining_today;
-
-    alert("+200 Point masuk 🎉");
-
-  }, 5000); // 5 detik delay (anggap iklan selesai)
-
-}
-
-  if(cooldown) return;
-
-  cooldown = true;
-  btn.disabled = true;
-  btn.innerText = "Loading iklan...";
-
-  cooldownText.innerText = "Menyiapkan iklan...";
-
-  setTimeout(async () => {
-
-    try {
-
-      const res = await fetch('/api/reward', {
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json'
-        },
-        body:JSON.stringify({
-          telegram_id:user?.id || 0
-        })
-      });
-
-      const data = await res.json();
-
-      if(!res.ok){
-        cooldownTime = data.cooldown || 15000;
-
-        cooldownText.innerText =
-          "Cooldown aktif: " + (data.cooldown_left || 15) + " detik";
-
-        return;
-      }
-
-      balanceText.innerText = data.balance;
-
-      limitInfo.innerText =
-        "Sisa iklan hari ini: " + data.remaining_today;
-
-      cooldownText.innerText =
-        "Cooldown " + Math.ceil(cooldownTime/1000) + " detik";
-
-      let timeLeft = cooldownTime / 1000;
-
-      let interval = setInterval(() => {
-
-        timeLeft--;
-
-        cooldownText.innerText =
-          "Cooldown: " + timeLeft + " detik";
-
-        if(timeLeft <= 0){
-          clearInterval(interval);
-          cooldown = false;
-          btn.disabled = false;
-          btn.innerText = "🎬 Tonton Iklan (+200)";
-          cooldownText.innerText = "Siap menonton iklan";
-        }
-
-      },1000);
-
-    } catch(err){
-      console.log(err);
-      alert("Error server");
+    if(!res.ok){
+      alert(data.error || "Error");
+      cooldown = false;
+      return;
     }
 
-  }, 1500);
+    balanceText.innerText = data.balance;
+    limitInfo.innerText = "Sisa iklan hari ini: " + data.remaining_today;
+
+    let timeLeft = cooldownTime / 1000;
+
+    cooldownText.innerText = "Cooldown: " + timeLeft + " detik";
+
+    let interval = setInterval(() => {
+
+      timeLeft--;
+
+      cooldownText.innerText = "Cooldown: " + timeLeft + " detik";
+
+      if(timeLeft <= 0){
+        clearInterval(interval);
+        cooldown = false;
+        cooldownText.innerText = "Siap menonton iklan";
+      }
+
+    }, 1000);
+
+  } catch(err){
+    console.log(err);
+    alert("Server error");
+    cooldown = false;
+  }
 }
 
 </script>
-<script>(function(s){s.dataset.zone='11068057',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+
 </body>
 </html>
