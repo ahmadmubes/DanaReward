@@ -205,11 +205,74 @@ async function watchAd(){
   if(cooldown) return;
 
   cooldown = true;
-
   btn.disabled = true;
 
-  cooldownText.innerText = "Menyiapkan iklan...";
+  cooldownText.innerText = "Membuka iklan...";
 
+  try {
+
+    // trigger interaction
+    const adWindow = window.open(
+      "https://otieu.com/4/9508894",
+      "_blank"
+    );
+
+    // kalau popup diblok
+    if(!adWindow){
+      alert("Izin popup diblokir");
+      cooldown = false;
+      btn.disabled = false;
+      return;
+    }
+
+    cooldownText.innerText = "Menunggu iklan...";
+
+    // tunggu user lihat ads
+    await new Promise(r => setTimeout(r, 6000));
+
+    const res = await fetch('/api/reward', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        telegram_id: user.id
+      })
+    });
+
+    const data = await res.json();
+
+    if(!res.ok){
+      alert(data.error || "Error");
+      cooldown = false;
+      btn.disabled = false;
+      return;
+    }
+
+    balanceText.innerText = data.balance;
+    limitInfo.innerText = "Sisa iklan hari ini: " + data.remaining_today;
+
+    let timeLeft = 15;
+
+    cooldownText.innerText = "Cooldown: " + timeLeft;
+
+    const interval = setInterval(() => {
+      timeLeft--;
+      cooldownText.innerText = "Cooldown: " + timeLeft;
+
+      if(timeLeft <= 0){
+        clearInterval(interval);
+        cooldown = false;
+        btn.disabled = false;
+        cooldownText.innerText = "Siap menonton iklan";
+      }
+    },1000);
+
+  } catch(err){
+    console.log(err);
+    alert("Error iklan");
+    cooldown = false;
+    btn.disabled = false;
+  }
+}
   try {
 
     // tunggu script ads ready
