@@ -113,9 +113,9 @@
     </div>
   </div>
 
-  <button id="adBtn" onclick="watchAd()">
-    🎬 Tonton Iklan (+200)
-  </button>
+<button onclick="watchAd()">
+  🎬 Tonton Iklan (+200)
+</button>
 
   <div class="info" id="limitInfo">
     Sisa iklan hari ini: -
@@ -146,6 +146,41 @@ let cooldown = false;
 let cooldownTime = 15000;
 
 async function watchAd(){
+
+  // tampilkan iklan Monetag (otomatis dari script inject)
+  let adLoaded = false;
+
+  try {
+    // trigger script Monetag (biasanya otomatis jalan)
+    adLoaded = true;
+  } catch(e){
+    alert("Iklan belum siap");
+    return;
+  }
+
+  // simulasi delay biar user benar-benar lihat iklan
+  setTimeout(async () => {
+
+    const res = await fetch('/api/reward', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        telegram_id:user?.id || 0
+      })
+    });
+
+    const data = await res.json();
+
+    balanceText.innerText = data.balance;
+
+    limitInfo.innerText =
+      "Sisa iklan hari ini: " + data.remaining_today;
+
+    alert("+200 Point masuk 🎉");
+
+  }, 5000); // 5 detik delay (anggap iklan selesai)
+
+}
 
   if(cooldown) return;
 
