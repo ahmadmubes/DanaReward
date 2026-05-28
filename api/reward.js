@@ -1,30 +1,15 @@
-let balances = {};
-let lastClaim = {};
-let dailyCount = {};
-let lastReset = {};
-let penalty = {}; // untuk tab spam
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
 const MAX_DAILY = 20;
-const BASE_COOLDOWN = 15000; // 15 detik
+const REWARD = 200;
+const COOLDOWN = 15000;
 
-function resetDailyIfNeeded(id) {
-  const today = new Date().toDateString();
-
-  if (lastReset[id] !== today) {
-    dailyCount[id] = 0;
-    lastReset[id] = today;
-  }
-}
-
-function getCooldown(id) {
-  // 🔥 kalau user spam → cooldown naik
-  let extra = penalty[id] || 0;
-
-  // max cooldown 60 detik
-  return Math.min(BASE_COOLDOWN + extra, 60000);
-}
-
-export default function handler(req, res) {
+export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -36,53 +21,76 @@ export default function handler(req, res) {
     return res.status(400).json({ error: 'No user' });
   }
 
-  const now = Date.now();
+  // ambil user
+  let { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('telegram_id', telegram_id)
+    .single();
 
-  resetDailyIfNeeded(telegram_id);
+  // kalau user belum ada → buat baru
+  if (!user) {
+    const { data: newUser } = await supabase
+      .from('users')
+      .insert({
+        telegram_id,
+        balance: 0,
+        daily_count: 0,
+        last_claim: null
+      })
+      .select()
+      .single();
 
-  if (!dailyCount[telegram_id]) dailyCount[telegram_id] = 0;
-  if (!penalty[telegram_id]) penalty[telegram_id] = 0;
-
-  // ⛔ cooldown dinamis
-  const cooldown = getCooldown(telegram_id);
-
-  if (lastClaim[telegram_id] && now - lastClaim[telegram_id] < cooldown) {
-
-    // 🔥 tambah penalty kalau terlalu cepat klik
-    penalty[telegram_id] += 2000; // tambah 2 detik setiap spam
-
-    return res.status(429).json({
-      error: 'Cooldown aktif',
-      cooldown_left: Math.ceil((cooldown - (now - lastClaim[telegram_id])) / 1000)
-    });
+    user = newUser;
   }
 
-  // reset penalty pelan-pelan (biar tidak terlalu berat)
-  penalty[telegram_id] = Math.max(0, penalty[telegram_id] - 1000);
+  const now = Date.now();
+
+  // cooldown check
+  if (user.last_claim) {
+    const diff = now - new Date(user.last_claim).getTime();
+
+    if (diff < COOLDOWN) {
+      return res.status(429).json({
+        error: 'Cooldown aktif',
+        cooldown_left: Math.ceil((COOLDOWN - diff) / 1000)
+      });
+    }
+  }
+
+  // reset harian (berdasarkan tanggal)
+  const today = new Date().toDateString();
+
+  if (user.last_reset !== today) {
+    user.daily_count = 0;
+  }
 
   // limit harian
-  if (dailyCount[telegram_id] >= MAX_DAILY) {
+  if (user.daily_count >= MAX_DAILY) {
     return res.status(403).json({
       error: 'Limit harian habis'
     });
   }
 
-  lastClaim[telegram_id] = now;
-  dailyCount[telegram_id]++;
+  // update data
+  const newBalance = (user.balance || 0) + REWARD;
+  const newCount = (user.daily_count || 0) + 1;
 
-  if (!balances[telegram_id]) {
-    balances[telegram_id] = 0;
-  }
-
-  const reward = 200;
-
-  balances[telegram_id] += reward;
+  const { data: updated } = await supabase
+    .from('users')
+    .update({
+      balance: newBalance,
+      daily_count: newCount,
+      last_claim: new Date().toISOString()
+    })
+    .eq('telegram_id', telegram_id)
+    .select()
+    .single();
 
   return res.status(200).json({
     success: true,
-    reward: reward,
-    balance: balances[telegram_id],
-    remaining_today: MAX_DAILY - dailyCount[telegram_id],
-    cooldown: getCooldown(telegram_id)
+    reward: REWARD,
+    balance: updated.balance,
+    remaining_today: MAX_DAILY - updated.daily_count
   });
 }
