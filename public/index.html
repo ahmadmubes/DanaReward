@@ -126,7 +126,10 @@ if(!tg){
 
 tg?.expand();
 
-const user = tg?.initDataUnsafe?.user || { id: 0, first_name: "Guest" };
+const user = tg?.initDataUnsafe?.user || {
+  id: 0,
+  first_name: "Guest"
+};
 
 const username = document.getElementById("username");
 const balanceText = document.getElementById("balance");
@@ -145,66 +148,43 @@ async function watchAd(){
   cooldown = true;
   btn.disabled = true;
 
-  cooldownText.innerText = "Membuka iklan...";
-
   try {
 
-    // buka iklan
-    const adWindow = window.open(
-      "https://otieu.com/4/9508894",
-      "_blank"
-    );
+    cooldownText.innerText = "Membuka iklan...";
 
-    if(!adWindow){
-      alert("Popup diblokir");
-      cooldown = false;
-      btn.disabled = false;
-      return;
-    }
+    // 🔥 FIX UTAMA: TANPA POPUP (ANTI BLOCK)
+    window.location.href = "https://otieu.com/4/9508894";
 
-    cooldownText.innerText = "Menunggu iklan...";
+    cooldownText.innerText = "Kembali ke aplikasi setelah iklan";
 
-    // tunggu user lihat iklan
-    await new Promise(r => setTimeout(r, 6000));
+    // cek user kembali ke app
+    const interval = setInterval(async () => {
 
-    const res = await fetch('/api/reward', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        telegram_id: user.id
-      })
-    });
+      if(document.visibilityState === "visible"){
 
-    const data = await res.json();
-
-    if(!res.ok){
-      alert(data.error || "Error");
-      cooldown = false;
-      btn.disabled = false;
-      return;
-    }
-
-    balanceText.innerText = data.balance;
-    limitInfo.innerText = "Sisa iklan hari ini: " + data.remaining_today;
-
-    let t = 15;
-
-    cooldownText.innerText = "Cooldown: " + t;
-
-    const interval = setInterval(() => {
-
-      t--;
-
-      cooldownText.innerText = "Cooldown: " + t;
-
-      if(t <= 0){
         clearInterval(interval);
+
+        const res = await fetch('/api/reward', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            telegram_id: user.id
+          })
+        });
+
+        const data = await res.json();
+
+        if(res.ok){
+          balanceText.innerText = data.balance;
+          limitInfo.innerText = "Sisa iklan hari ini: " + data.remaining_today;
+        }
+
         cooldown = false;
         btn.disabled = false;
         cooldownText.innerText = "Siap menonton iklan";
       }
 
-    },1000);
+    }, 3000);
 
   } catch(err){
     console.log(err);
