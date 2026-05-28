@@ -1,138 +1,102 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Reward App</title>
 
-  <meta name="monetag" content="a20fefbe4065e0f3bda1131ba006a227">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <title>Reward App</title>
-
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <style>
-    body{
-      margin:0;
-      font-family:Arial;
-      background:#0f172a;
-      color:white;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      height:100vh;
-    }
-
-    .card{
-      width:90%;
-      max-width:420px;
-      background:rgba(255,255,255,0.05);
-      padding:20px;
-      border-radius:15px;
-      text-align:center;
-    }
-
-    button{
-      width:100%;
-      padding:15px;
-      border:none;
-      border-radius:10px;
-      background:#22c55e;
-      color:white;
-      font-weight:bold;
-      cursor:pointer;
-    }
-
-    .balance{
-      font-size:30px;
-      margin:15px 0;
-    }
-
-    .info{
-      margin-top:10px;
-      font-size:13px;
-      opacity:0.7;
-    }
-  </style>
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#0f172a;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+.card{
+  width:90%;
+  max-width:420px;
+  background:rgba(255,255,255,0.05);
+  padding:20px;
+  border-radius:15px;
+  text-align:center;
+}
+button{
+  width:100%;
+  padding:15px;
+  border:none;
+  border-radius:10px;
+  background:#22c55e;
+  color:white;
+  font-weight:bold;
+}
+.balance{font-size:28px;margin:15px 0;}
+</style>
 </head>
 
 <body>
 
 <div class="card">
-
   <h2>💰 Reward App</h2>
 
-  <div id="username">Loading...</div>
+  <div id="user">Loading...</div>
 
   <div class="balance">
     <span id="balance">0</span> Point
   </div>
 
-  <button id="btn" onclick="watchAd()">🎬 Tonton Iklan (+200)</button>
+  <button onclick="watchAd()">🎬 Tonton Iklan</button>
 
-  <div class="info" id="info">Siap menonton iklan</div>
-
+  <p id="info">Siap</p>
 </div>
 
 <script>
-
 const tg = window.Telegram?.WebApp;
 tg?.expand();
 
-const user = tg?.initDataUnsafe?.user || { id:0, first_name:"Guest" };
+const user = tg?.initDataUnsafe?.user || {id:0,first_name:"Guest"};
 
-document.getElementById("username").innerText = user.first_name;
-
-const btn = document.getElementById("btn");
-const balanceEl = document.getElementById("balance");
-const info = document.getElementById("info");
+document.getElementById("user").innerText = user.first_name;
 
 let cooldown = false;
 
 async function watchAd(){
 
   if(cooldown) return;
-
   cooldown = true;
-  btn.disabled = true;
 
-  info.innerText = "Membuka iklan...";
+  document.getElementById("info").innerText = "Membuka halaman iklan...";
 
-  // 🔥 FLAG SYSTEM START
-  localStorage.setItem("ads_status", "watching");
+  // buka ads page
+  window.open("/ads.html","_blank");
 
-  window.open("/ads.html", "_blank");
+  // tunggu user balik (tanpa deteksi ads)
+  setTimeout(async () => {
 
-  info.innerText = "Tunggu iklan selesai...";
+    const res = await fetch("/api/reward", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ telegram_id:user.id })
+    });
 
-  const check = setInterval(async () => {
+    const data = await res.json();
 
-    if(localStorage.getItem("ads_status") === "done"){
-
-      clearInterval(check);
-
-      localStorage.removeItem("ads_status");
-
-      const res = await fetch("/api/reward", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ telegram_id: user.id })
-      });
-
-      const data = await res.json();
-
-      if(res.ok){
-        balanceEl.innerText = data.balance;
-      }
-
-      cooldown = false;
-      btn.disabled = false;
-      info.innerText = "Siap menonton iklan";
+    if(res.ok){
+      document.getElementById("balance").innerText = data.balance;
     }
 
-  }, 2000);
+    document.getElementById("info").innerText = "Siap lagi";
+
+    cooldown = false;
+
+  }, 8000); // delay safety
 
 }
-
 </script>
 
 </body>
