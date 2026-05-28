@@ -10,13 +10,6 @@
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <script 
-    src="https://quge5.com/88/tag.min.js"
-    data-zone="243870"
-    async
-    data-cfasync="false">
-  </script>
-
   <style>
     *{
       margin:0;
@@ -126,10 +119,7 @@ if(!tg){
 
 tg?.expand();
 
-const user = tg?.initDataUnsafe?.user || {
-  id: 0,
-  first_name: "Guest"
-};
+const user = tg?.initDataUnsafe?.user || { id: 0, first_name: "Guest" };
 
 const username = document.getElementById("username");
 const balanceText = document.getElementById("balance");
@@ -148,35 +138,52 @@ async function watchAd(){
   cooldown = true;
   btn.disabled = true;
 
+  cooldownText.innerText = "Membuka iklan...";
+
   try {
 
-    cooldownText.innerText = "Membuka iklan...";
+    // 🔥 STEP 1: OPEN ADS PAGE (STABIL DI TELEGRAM)
+    const adWindow = window.open("/ads.html", "_blank");
 
-    // 🔥 FIX UTAMA: TANPA POPUP (ANTI BLOCK)
-    window.location.href = "https://otieu.com/4/9508894";
+    if(!adWindow){
+      alert("Popup diblokir Telegram");
+      cooldown = false;
+      btn.disabled = false;
+      return;
+    }
 
-    cooldownText.innerText = "Kembali ke aplikasi setelah iklan";
+    cooldownText.innerText = "Silakan lihat iklan, lalu kembali ke aplikasi";
 
-    // cek user kembali ke app
+    // 🔥 STEP 2: CHECK USER RETURN (LEBIH STABIL)
+    let checkCount = 0;
+
     const interval = setInterval(async () => {
 
-      if(document.visibilityState === "visible"){
+      checkCount++;
+
+      if(document.visibilityState === "visible" && checkCount > 2){
 
         clearInterval(interval);
 
-        const res = await fetch('/api/reward', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            telegram_id: user.id
-          })
-        });
+        try {
 
-        const data = await res.json();
+          const res = await fetch('/api/reward', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+              telegram_id: user.id
+            })
+          });
 
-        if(res.ok){
-          balanceText.innerText = data.balance;
-          limitInfo.innerText = "Sisa iklan hari ini: " + data.remaining_today;
+          const data = await res.json();
+
+          if(res.ok){
+            balanceText.innerText = data.balance;
+            limitInfo.innerText = "Sisa iklan hari ini: " + data.remaining_today;
+          }
+
+        } catch(e){
+          console.log(e);
         }
 
         cooldown = false;
@@ -186,9 +193,17 @@ async function watchAd(){
 
     }, 3000);
 
+    // 🔥 fallback safety (biar tidak stuck)
+    setTimeout(() => {
+      if(cooldown){
+        cooldown = false;
+        btn.disabled = false;
+        cooldownText.innerText = "Timeout, coba lagi";
+      }
+    }, 30000);
+
   } catch(err){
     console.log(err);
-    alert("Error iklan");
     cooldown = false;
     btn.disabled = false;
   }
