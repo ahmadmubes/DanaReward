@@ -21,21 +21,19 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No user' });
   }
 
-  // 🔥 VALIDASI SESSION ADS (ANTI BYPASS BASIC)
-  if (!ads_session || ads_session !== "done") {
+  // VALIDASI ADS SESSION
+  if (ads_session !== "done") {
     return res.status(403).json({
       error: "Invalid ads session"
     });
   }
 
-  // ambil user
   let { data: user } = await supabase
     .from('users')
     .select('*')
     .eq('telegram_id', telegram_id)
     .single();
 
-  // kalau user belum ada → buat baru
   if (!user) {
     const { data: newUser } = await supabase
       .from('users')
@@ -54,7 +52,6 @@ export default async function handler(req, res) {
 
   const now = Date.now();
 
-  // cooldown check
   if (user.last_claim) {
     const diff = now - new Date(user.last_claim).getTime();
 
@@ -66,7 +63,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // reset harian
   const today = new Date().toDateString();
 
   if (user.last_reset !== today) {
@@ -74,11 +70,13 @@ export default async function handler(req, res) {
 
     await supabase
       .from('users')
-      .update({ last_reset: today, daily_count: 0 })
+      .update({
+        last_reset: today,
+        daily_count: 0
+      })
       .eq('telegram_id', telegram_id);
   }
 
-  // limit harian
   if (user.daily_count >= MAX_DAILY) {
     return res.status(403).json({
       error: 'Limit harian habis'
