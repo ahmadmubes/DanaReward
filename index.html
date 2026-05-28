@@ -52,7 +52,7 @@ button{
 
   <button onclick="watchAd()">🎬 Tonton Iklan</button>
 
-  <p id="info">Siap</p>
+  <p id="info"></p>
 </div>
 
 <script>
@@ -70,18 +70,20 @@ async function watchAd(){
   if(cooldown) return;
   cooldown = true;
 
-  document.getElementById("info").innerText = "Membuka halaman iklan...";
+  document.getElementById("info").innerText = "Membuka iklan...";
 
   // buka ads page
   window.open("/ads.html","_blank");
 
-  // tunggu user balik (tanpa deteksi ads)
   setTimeout(async () => {
 
     const res = await fetch("/api/reward", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ telegram_id:user.id })
+      body:JSON.stringify({
+        telegram_id: user.id,
+        ads_session: localStorage.getItem("ads_status")
+      })
     });
 
     const data = await res.json();
@@ -91,10 +93,9 @@ async function watchAd(){
     }
 
     document.getElementById("info").innerText = "Siap lagi";
-
     cooldown = false;
 
-  }, 8000); // delay safety
+  }, 8000);
 
 }
 </script>
