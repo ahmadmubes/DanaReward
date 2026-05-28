@@ -1,90 +1,55 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ads</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ads</title>
 
-  <meta name="monetag" content="a20fefbe4065e0f3bda1131ba006a227">
+<meta name="monetag" content="a20fefbe4065e0f3bda1131ba006a227">
 
-  <!-- Monetag -->
-  <script 
-    src="https://quge5.com/88/tag.min.js"
-    data-zone="243870"
-    async
-    data-cfasync="false">
-  </script>
+<script 
+src="https://quge5.com/88/tag.min.js"
+data-zone="243870"
+async
+data-cfasync="false"></script>
 
-  <style>
-    body{
-      margin:0;
-      height:100vh;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      flex-direction:column;
-      font-family:Arial;
-      background:#0f172a;
-      color:white;
-      text-align:center;
-    }
-
-    .box{
-      padding:20px;
-      border:1px solid rgba(255,255,255,0.1);
-      border-radius:15px;
-      background:rgba(255,255,255,0.05);
-    }
-  </style>
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#0f172a;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  flex-direction:column;
+}
+.box{
+  text-align:center;
+}
+</style>
 </head>
 
 <body>
 
 <div class="box">
   <h3>Loading Ads...</h3>
-  <p id="status">Menyiapkan iklan...</p>
+  <p>Silakan tunggu beberapa detik</p>
 </div>
 
 <script>
+let start = Date.now();
 
-let adsShown = false;
-let startTime = Date.now();
-
-function markDone(){
-  localStorage.setItem("ads_status", "done");
+function finish(){
+  localStorage.setItem("ads_done","1");
   window.close();
 }
 
-// 🔥 STEP 1: WAIT MINIMUM TIME (ANTI SKIP)
+// fallback aman (karena ads tidak bisa dideteksi real)
 setTimeout(() => {
-  adsShown = true;
-  document.getElementById("status").innerText = "Iklan aktif...";
-}, 3000);
-
-// 🔥 STEP 2: CHECK IF ADS SCRIPT LOADED
-const checkAds = setInterval(() => {
-
-  const scripts = [...document.querySelectorAll("script")];
-  const loaded = scripts.some(s => s.src.includes("tag.min.js"));
-
-  const timePassed = Date.now() - startTime;
-
-  // WAJIB:
-  // 1. script loaded
-  // 2. minimal 6 detik
-  // 3. user sudah lihat halaman
-
-  if(loaded && timePassed > 6000 && adsShown){
-    clearInterval(checkAds);
-
-    document.getElementById("status").innerText = "Selesai...";
-
-    setTimeout(() => {
-      markDone();
-    }, 1500);
-  }
-
-}, 1000);
+  finish();
+}, 7000);
 
 </script>
 
