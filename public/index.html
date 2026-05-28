@@ -141,17 +141,50 @@ username.innerText = user.first_name;
 
 let cooldown = false;
 let cooldownTime = 15000;
+function waitForMonetag(timeout = 5000){
+  return new Promise((resolve) => {
+    let t = 0;
 
+    const i = setInterval(() => {
+
+      // cek script Monetag sudah load
+      const scripts = document.querySelectorAll("script");
+      const loaded = [...scripts].some(s =>
+        s.src && s.src.includes("tag.min.js")
+      );
+
+      if(loaded){
+        clearInterval(i);
+        resolve(true);
+      }
+
+      t += 500;
+      if(t >= timeout){
+        clearInterval(i);
+        resolve(false);
+      }
+
+    }, 500);
+  });
+}
 async function watchAd(){
 
   if(cooldown) return;
 
   cooldown = true;
   btn.disabled = true;
-  cooldownText.innerText = "Mempersiapkan iklan...";
 
-  try {
+  cooldownText.innerText = "Menyiapkan iklan...";
 
+  // WAIT ADS READY
+  const ready = await waitForMonetag();
+
+  if(!ready){
+    cooldownText.innerText = "Iklan belum tersedia, coba lagi";
+    cooldown = false;
+    btn.disabled = false;
+    return;
+  }
     // delay biar script ads sempat load
     await new Promise(r => setTimeout(r, 2500));
 
