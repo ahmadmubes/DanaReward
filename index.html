@@ -6,77 +6,52 @@
 
   <meta name="monetag" content="a20fefbe4065e0f3bda1131ba006a227">
 
-  <title>Telegram Reward App</title>
+  <title>Reward App</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <style>
-    *{
-      margin:0;
-      padding:0;
-      box-sizing:border-box;
-      font-family:Arial,sans-serif;
-    }
-
     body{
-      min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:linear-gradient(135deg,#0f172a,#1e293b,#111827);
+      margin:0;
+      font-family:Arial;
+      background:#0f172a;
       color:white;
-      padding:20px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
     }
 
     .card{
-      width:100%;
+      width:90%;
       max-width:420px;
-      background:rgba(255,255,255,0.06);
-      border:1px solid rgba(255,255,255,0.1);
-      backdrop-filter:blur(10px);
-      border-radius:20px;
-      padding:25px;
-      text-align:center;
-    }
-
-    h1{ font-size:22px; margin-bottom:10px; }
-
-    .user{ opacity:0.8; margin-bottom:15px; }
-
-    .balance-box{
-      background:rgba(34,197,94,0.15);
-      border:1px solid rgba(34,197,94,0.4);
+      background:rgba(255,255,255,0.05);
+      padding:20px;
       border-radius:15px;
-      padding:15px;
-      margin:20px 0;
-    }
-
-    .balance{
-      font-size:32px;
-      font-weight:bold;
-      color:#22c55e;
+      text-align:center;
     }
 
     button{
       width:100%;
       padding:15px;
       border:none;
-      border-radius:12px;
-      font-size:16px;
-      font-weight:bold;
+      border-radius:10px;
+      background:#22c55e;
       color:white;
-      background:linear-gradient(135deg,#22c55e,#16a34a);
+      font-weight:bold;
       cursor:pointer;
     }
 
-    button:disabled{
-      opacity:0.6;
-      cursor:not-allowed;
+    .balance{
+      font-size:30px;
+      margin:15px 0;
     }
 
-    .info{ margin-top:10px; font-size:13px; opacity:0.8; }
-
-    .small{ margin-top:10px; font-size:12px; opacity:0.6; }
+    .info{
+      margin-top:10px;
+      font-size:13px;
+      opacity:0.7;
+    }
   </style>
 </head>
 
@@ -84,50 +59,32 @@
 
 <div class="card">
 
-  <h1>💰 Telegram Reward App</h1>
+  <h2>💰 Reward App</h2>
 
-  <div class="user" id="username">Loading...</div>
+  <div id="username">Loading...</div>
 
-  <div class="balance-box">
-    <div>Balance</div>
-    <div class="balance">
-      <span id="balance">0</span> Point
-    </div>
+  <div class="balance">
+    <span id="balance">0</span> Point
   </div>
 
-  <button id="watchBtn" onclick="watchAd()">
-    🎬 Tonton Iklan (+200)
-  </button>
+  <button id="btn" onclick="watchAd()">🎬 Tonton Iklan (+200)</button>
 
-  <div class="info" id="limitInfo">
-    Sisa iklan hari ini: -
-  </div>
-
-  <div class="small" id="cooldownText">
-    Siap menonton iklan
-  </div>
+  <div class="info" id="info">Siap menonton iklan</div>
 
 </div>
 
 <script>
 
 const tg = window.Telegram?.WebApp;
-
-if(!tg){
-  alert("Buka dari Telegram bot");
-}
-
 tg?.expand();
 
-const user = tg?.initDataUnsafe?.user || { id: 0, first_name: "Guest" };
+const user = tg?.initDataUnsafe?.user || { id:0, first_name:"Guest" };
 
-const username = document.getElementById("username");
-const balanceText = document.getElementById("balance");
-const limitInfo = document.getElementById("limitInfo");
-const cooldownText = document.getElementById("cooldownText");
-const btn = document.getElementById("watchBtn");
+document.getElementById("username").innerText = user.first_name;
 
-username.innerText = user.first_name;
+const btn = document.getElementById("btn");
+const balanceEl = document.getElementById("balance");
+const info = document.getElementById("info");
 
 let cooldown = false;
 
@@ -138,75 +95,41 @@ async function watchAd(){
   cooldown = true;
   btn.disabled = true;
 
-  cooldownText.innerText = "Membuka iklan...";
+  info.innerText = "Membuka iklan...";
 
-  try {
+  // 🔥 FLAG SYSTEM START
+  localStorage.setItem("ads_status", "watching");
 
-    // 🔥 STEP 1: OPEN ADS PAGE (STABIL DI TELEGRAM)
-    const adWindow = window.open("/ads.html", "_blank");
+  window.open("/ads.html", "_blank");
 
-    if(!adWindow){
-      alert("Popup diblokir Telegram");
+  info.innerText = "Tunggu iklan selesai...";
+
+  const check = setInterval(async () => {
+
+    if(localStorage.getItem("ads_status") === "done"){
+
+      clearInterval(check);
+
+      localStorage.removeItem("ads_status");
+
+      const res = await fetch("/api/reward", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ telegram_id: user.id })
+      });
+
+      const data = await res.json();
+
+      if(res.ok){
+        balanceEl.innerText = data.balance;
+      }
+
       cooldown = false;
       btn.disabled = false;
-      return;
+      info.innerText = "Siap menonton iklan";
     }
 
-    cooldownText.innerText = "Silakan lihat iklan, lalu kembali ke aplikasi";
-
-    // 🔥 STEP 2: CHECK USER RETURN (LEBIH STABIL)
-    let checkCount = 0;
-
-    const interval = setInterval(async () => {
-
-      checkCount++;
-
-      if(document.visibilityState === "visible" && checkCount > 2){
-
-        clearInterval(interval);
-
-        try {
-
-          const res = await fetch('/api/reward', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({
-              telegram_id: user.id
-            })
-          });
-
-          const data = await res.json();
-
-          if(res.ok){
-            balanceText.innerText = data.balance;
-            limitInfo.innerText = "Sisa iklan hari ini: " + data.remaining_today;
-          }
-
-        } catch(e){
-          console.log(e);
-        }
-
-        cooldown = false;
-        btn.disabled = false;
-        cooldownText.innerText = "Siap menonton iklan";
-      }
-
-    }, 3000);
-
-    // 🔥 fallback safety (biar tidak stuck)
-    setTimeout(() => {
-      if(cooldown){
-        cooldown = false;
-        btn.disabled = false;
-        cooldownText.innerText = "Timeout, coba lagi";
-      }
-    }, 30000);
-
-  } catch(err){
-    console.log(err);
-    cooldown = false;
-    btn.disabled = false;
-  }
+  }, 2000);
 
 }
 
