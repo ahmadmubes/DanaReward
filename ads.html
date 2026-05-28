@@ -25,30 +25,23 @@ body{
   height:100vh;
   flex-direction:column;
 }
-.box{
-  text-align:center;
-}
 </style>
 </head>
 
 <body>
 
-<div class="box">
-  <h3>Loading Ads...</h3>
-  <p>Silakan tunggu beberapa detik</p>
-</div>
+<h3>Loading Ads...</h3>
+<p>Silakan tunggu</p>
 
 <script>
-let start = Date.now();
 
-function finish(){
-  localStorage.setItem("ads_done","1");
-  window.close();
-}
-
-// fallback aman (karena ads tidak bisa dideteksi real)
+// WAJIB MARK SELESAI ADS
 setTimeout(() => {
-  finish();
+
+  localStorage.setItem("ads_status","done");
+
+  window.close();
+
 }, 7000);
 
 </script>
