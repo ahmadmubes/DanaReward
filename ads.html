@@ -7,6 +7,7 @@
 
   <meta name="monetag" content="a20fefbe4065e0f3bda1131ba006a227">
 
+  <!-- Monetag -->
   <script 
     src="https://quge5.com/88/tag.min.js"
     data-zone="243870"
@@ -17,34 +18,73 @@
   <style>
     body{
       margin:0;
-      font-family:Arial;
-      background:#0f172a;
-      color:white;
+      height:100vh;
       display:flex;
       justify-content:center;
       align-items:center;
-      height:100vh;
       flex-direction:column;
+      font-family:Arial;
+      background:#0f172a;
+      color:white;
+      text-align:center;
+    }
+
+    .box{
+      padding:20px;
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:15px;
+      background:rgba(255,255,255,0.05);
     }
   </style>
 </head>
 
 <body>
 
-  <h2>Loading Ads...</h2>
-  <p>Silakan tunggu 5–7 detik</p>
+<div class="box">
+  <h3>Loading Ads...</h3>
+  <p id="status">Menyiapkan iklan...</p>
+</div>
 
 <script>
 
-setTimeout(() => {
+let adsShown = false;
+let startTime = Date.now();
 
-  // 🔥 SIGNAL BACK TO APP
+function markDone(){
   localStorage.setItem("ads_status", "done");
-
-  // coba close tab
   window.close();
+}
 
-}, 7000);
+// 🔥 STEP 1: WAIT MINIMUM TIME (ANTI SKIP)
+setTimeout(() => {
+  adsShown = true;
+  document.getElementById("status").innerText = "Iklan aktif...";
+}, 3000);
+
+// 🔥 STEP 2: CHECK IF ADS SCRIPT LOADED
+const checkAds = setInterval(() => {
+
+  const scripts = [...document.querySelectorAll("script")];
+  const loaded = scripts.some(s => s.src.includes("tag.min.js"));
+
+  const timePassed = Date.now() - startTime;
+
+  // WAJIB:
+  // 1. script loaded
+  // 2. minimal 6 detik
+  // 3. user sudah lihat halaman
+
+  if(loaded && timePassed > 6000 && adsShown){
+    clearInterval(checkAds);
+
+    document.getElementById("status").innerText = "Selesai...";
+
+    setTimeout(() => {
+      markDone();
+    }, 1500);
+  }
+
+}, 1000);
 
 </script>
 
